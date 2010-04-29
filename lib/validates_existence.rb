@@ -34,7 +34,23 @@ module ActiveRecord
                 else # not polymorphic
                   assoc_class = assoc.klass
                 end
-                record.errors.add(attr_name, configuration[:message]) unless assoc_class && assoc_class.exists?(fk_value)
+                
+                # Allow checking to see if associated item has same field value
+                if scope = configuration[:scope]
+                  Array(scope).map do |scope_item|
+                    scope_value = record.send(scope_item)
+                    unless assoc_class && assoc_class.find(:first, :conditions => [
+                      "id = ? AND #{scope_item} = ?", fk_value, scope_value
+                    ])
+                      record.errors.add(attr_name, configuration[:message]) 
+                    end
+                  end
+                else
+                  unless assoc_class && assoc_class.exists?(fk_value)
+                    record.errors.add(attr_name, configuration[:message]) 
+                  end
+                end
+                
               end
             end
           end
